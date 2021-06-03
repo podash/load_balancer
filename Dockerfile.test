@@ -2,7 +2,7 @@ FROM golang:1.15 as build
 
 RUN apt-get update && apt-get install -y ninja-build
 
-RUN go get -u github.com/podash/load_balancer/bood/cmd/bood
+RUN go get -u github.com/podash/load_balancer/build/cmd/bood
 
 WORKDIR /go/src/practice-2
 COPY . .

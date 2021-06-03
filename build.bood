@@ -1,0 +1,19 @@
+go_binary {
+  name: "server",
+  pkg: "github.com/podash/load_balancer/cmd/server",
+  srcs: [
+    "httptools/**/*.go",
+    "signal/**/*.go",
+    "cmd/server/*.go"
+  ]
+}
+
+go_binary {
+  name: "lb",
+  pkg: "github.com/podash/load_balancer/cmd/lb",
+  srcs: [
+    "httptools/**/*.go",
+    "signal/**/*.go",
+    "cmd/lb/*.go"
+  ]
+}

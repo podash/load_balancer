@@ -7,4 +7,6 @@ RUN go get -u github.com/podash/load_balancer/build/cmd/bood
 WORKDIR /go/src/practice-2
 COPY . .
 
-ENTRYPOINT ["echo", "ok"]
+# ENTRYPOINT ["bood", "integration-tests"]
+# ENTRYPOINT ["echo", "ok"]
+ENTRYPOINT ["bood", "./out/reports/integration-tests"]

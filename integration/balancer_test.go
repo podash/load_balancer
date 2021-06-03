@@ -3,8 +3,11 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const baseAddress = "http://balancer:8090"
@@ -14,12 +17,34 @@ var client = http.Client{
 }
 
 func TestBalancer(t *testing.T) {
-	resp, err := client.Get(fmt.Sprintf("%s/api/v1/some-data", baseAddress))
-	if err != nil {
-		t.Error(err)
+	for i := 0; i < 3; i++ {
+		route := fmt.Sprintf("%s/api/v1/some-data", baseAddress)
+		resp, err := client.Get(route)
+		assert.Nil(t, err)
+		compare := resp.Header.Get("lb-from")
+		for j := 0; j < 5; j++ {
+			resp, err = client.Get(route)
+			assert.Equal(t, compare, resp.Header.Get("lb-from"))
+			assert.Nil(t, err)
+		}
 	}
-	t.Logf("response from [%s]", resp.Header.Get("lb-from"))
 }
 
 func BenchmarkBalancer(b *testing.B) {
+	var timeForQueries int64 = 0
+	iterations := b.N
+	for i := 0; i < 3; i++ {
+		route := fmt.Sprintf("%s/api/v1/some-data", baseAddress)
+		resp, err := client.Get(route)
+		assert.Nil(b, err)
+		compare := resp.Header.Get("lb-from")
+		for j := 0; j < iterations; j++ {
+			start := time.Now()
+			resp, err = client.Get(route)
+			timeForQueries += time.Since(start).Nanoseconds()
+			assert.Equal(b, compare, resp.Header.Get("lb-from"))
+			assert.Nil(b, err)
+		}
+	}
+	fmt.Printf("\naverage query time: %s\n", strconv.Itoa(int(timeForQueries)/iterations))
 }

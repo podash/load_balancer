@@ -1,7 +1,8 @@
 language: go
 
+dist: bionic
 go:
-  - 1.15
+- 1.16
 
 services:
   - docker

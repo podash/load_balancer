@@ -22,7 +22,6 @@ go_tested_binary {
   srcsExclude: ["**/*_test.go"],
   testPkg: "./cmd/lb",
   testSrcs: ["cmd/lb/*_test.go"]
-  // TODO: Додайте запуск тестів для балансувальника.
 }
 
 go_tested_binary {

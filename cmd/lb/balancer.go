@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/podash/load_balancer/httptools"
@@ -28,6 +31,7 @@ var (
 		"server2:8080",
 		"server3:8080",
 	}
+	serverHealths = []bool{true, true, true}
 )
 
 func scheme() string {
@@ -84,22 +88,61 @@ func forward(dst string, rw http.ResponseWriter, r *http.Request) error {
 	}
 }
 
+func hashAddress(addr string) int {
+	ha := strings.Split(strings.Join(strings.Split(addr, "."), ""), ":")[0]
+	hs, err := strconv.Atoi(ha)
+	if err != nil {
+		panic(err)
+	}
+	return hs
+}
+
+func filterHealthy() []string {
+	healthyServersPool := []string{}
+	for i := range serversPool {
+		if serverHealths[i] == true {
+			healthyServersPool = append(healthyServersPool, serversPool[i])
+		}
+	}
+	return healthyServersPool
+}
+
+func balanceRequest(addr string) (string, error) {
+	healthyServersPool := filterHealthy()
+	if len(healthyServersPool) == 0 {
+		return "", errors.New("No servers available")
+	}
+	addrHash := hashAddress(addr)
+	serverIndex := addrHash % len(healthyServersPool)
+	//log.Println(addr, serverIndex, healthyServersPool[serverIndex])
+	return healthyServersPool[serverIndex], nil
+}
+
+func handleRequest(rw http.ResponseWriter, r *http.Request) {
+	server, err := balanceRequest(r.RemoteAddr)
+	if err != nil {
+		rw.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = rw.Write([]byte("FAILURE"))
+		return
+	}
+	forward(server, rw, r)
+}
+
 func main() {
 	flag.Parse()
-	for _, server := range serversPool {
+	for i, server := range serversPool {
 		server := server
 		go func() {
 			for range time.Tick(10 * time.Second) {
+				serverHealths[i] = health(server)
 				log.Println(server, health(server))
 			}
 		}()
 	}
 
-	frontend := httptools.CreateServer(*port, http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		forward(serversPool[0], rw, r)
-	}))
+	frontend := httptools.CreateServer(*port, http.HandlerFunc(handleRequest))
 
-	log.Println("Starting load balancer...")
+	log.Println("Starting load balancer...NYA!")
 	log.Printf("Tracing support enabled: %t", *traceEnabled)
 	frontend.Start()
 	signal.WaitForTerminationSignal()
